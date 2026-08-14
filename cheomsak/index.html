@@ -179,6 +179,57 @@
   .form-actions { display: flex; gap: var(--spacing-sm); }
   .form-actions .btn { width: auto; flex: 1; margin-bottom: 0; }
 
+  /* Week navigation */
+  .week-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .week-nav-label { font-size: 14px; font-weight: 700; color: var(--ink); }
+
+  .week-nav-btn {
+    border: 1px solid var(--hairline);
+    background: var(--canvas);
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: var(--rounded-sm);
+    cursor: pointer;
+  }
+
+  .week-nav-btn:disabled { color: var(--ink-mute); cursor: not-allowed; opacity: 0.5; }
+
+  /* Receipt rows (my-schedule receipt panel) */
+  .receipt-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 13px;
+  }
+
+  .receipt-row:last-child { border-bottom: none; }
+  .receipt-row-name { font-weight: 700; white-space: nowrap; }
+  .receipt-row-meta { color: var(--ink-mute); font-size: 12px; flex: 1; margin-left: var(--spacing-sm); }
+
+  .receipt-row-remove {
+    flex-shrink: 0;
+    border: none;
+    background: none;
+    color: var(--ink-mute);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 6px;
+  }
+
+  .receipt-row-remove:hover { color: var(--error); }
+
   /* Week calendar */
   .week-calendar {
     display: grid;
@@ -228,6 +279,18 @@
   .class-card .class-meta { font-size: 12px; margin-bottom: 2px; }
   .class-card .class-teachers { font-size: 12px; font-weight: 400; color: var(--primary); }
   .class-card .class-teachers strong { font-weight: 700; }
+
+  .receipt-status-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: var(--rounded-pill);
+    margin-bottom: var(--spacing-xs);
+  }
+
+  .receipt-status-badge--done { background: rgba(22, 163, 74, 0.12); color: var(--success); }
+  .receipt-status-badge--pending { background: rgba(220, 38, 38, 0.10); color: var(--error); }
 
   .home-edit-panel {
     margin-top: var(--spacing-lg);
@@ -342,6 +405,7 @@
 <div id="screen-my-schedule" class="screen">
   <div class="card card--calendar">
     <h3>내 시간표</h3>
+    <div class="week-nav" id="myScheduleWeekNav"></div>
     <div class="week-calendar" id="myScheduleCalendar"></div>
     <div class="home-edit-panel hidden" id="myScheduleReceiptPanel"></div>
   </div>
@@ -407,12 +471,16 @@
   let editingClassId = null;
 
   // ---------- Date helpers (real week calendar) ----------
-  function getCurrentWeekDates(baseDate = new Date()) {
+  function getMondayOfWeek(baseDate) {
     const day = baseDate.getDay(); // 0=Sun..6=Sat
     const diffToMonday = (day === 0) ? -6 : 1 - day;
     const monday = new Date(baseDate);
     monday.setHours(0, 0, 0, 0);
     monday.setDate(baseDate.getDate() + diffToMonday);
+    return monday;
+  }
+
+  function buildWeekDates(monday) {
     const dates = {};
     WEEKDAYS.forEach((label, idx) => {
       const d = new Date(monday);
@@ -438,6 +506,24 @@
     const min = String(d.getMinutes()).padStart(2, '0');
     return `${formatDateLabel(d)} ${h}:${min}`;
   }
+
+  function getReceiptsForClassDate(cls, dateObj) {
+    const dateLabel = formatDateLabel(dateObj);
+    return receiptsData.filter(r => r.className === cls.className && r.date === dateLabel);
+  }
+
+  // 시간표가 고정되어 있는 기간: 8/3 ~ 9/13 (해당 기간 내 주 단위로만 이동 가능)
+  const SCHEDULE_RANGE_YEAR = new Date().getFullYear();
+  const MIN_WEEK_MONDAY = getMondayOfWeek(new Date(SCHEDULE_RANGE_YEAR, 7, 3));
+  const MAX_WEEK_MONDAY = getMondayOfWeek(new Date(SCHEDULE_RANGE_YEAR, 8, 13));
+
+  function clampWeekMonday(monday) {
+    if (monday < MIN_WEEK_MONDAY) return new Date(MIN_WEEK_MONDAY);
+    if (monday > MAX_WEEK_MONDAY) return new Date(MAX_WEEK_MONDAY);
+    return monday;
+  }
+
+  let myScheduleWeekMonday = null;
 
   let noticesData = [
     { id: 1, title: '8월 3주차 시간표 안내', content: '8/18(월)부터 강남학원 고3반 시간이 18:00 → 18:30으로 변경됩니다. 참고 부탁드려요.', date: '8/11', author: '이경근' },
@@ -537,6 +623,7 @@
     receiptClassId = null;
     receiptDateKey = null;
     justRegisteredNames = [];
+    myScheduleWeekMonday = null;
     appNav.classList.remove('hidden');
     adjustBodyPadding();
     goToScreen('screen-home');
@@ -549,6 +636,7 @@
     receiptClassId = null;
     receiptDateKey = null;
     justRegisteredNames = [];
+    myScheduleWeekMonday = null;
     loginForm.reset();
     pinInputs.forEach(input => input.value = '');
     errorMessage.textContent = '';
@@ -577,7 +665,13 @@
       || (mode === 'receipt' && receiptClassId === cls.id && receiptDateKey === dateKey);
     const clickable = mode === 'admin' || mode === 'receipt';
     card.className = 'class-card' + (clickable ? ' class-card--editable' : '') + (isActive ? ' class-card--active' : '');
+    const badgeHtml = (mode === 'receipt' && dateObj)
+      ? (getReceiptsForClassDate(cls, dateObj).length > 0
+          ? '<div class="receipt-status-badge receipt-status-badge--done">입력 완료</div>'
+          : '<div class="receipt-status-badge receipt-status-badge--pending">미입력</div>')
+      : '';
     card.innerHTML = `
+      ${badgeHtml}
       <div class="class-name">${cls.className}</div>
       <div class="class-location">${cls.academy}</div>
       <div class="class-time">${cls.time}</div>
@@ -696,12 +790,43 @@
 
   function renderMyScheduleCalendar() {
     if (!currentUser) return;
+    if (!myScheduleWeekMonday) {
+      myScheduleWeekMonday = clampWeekMonday(getMondayOfWeek(new Date()));
+    }
     const myClasses = classesData.filter(cls =>
       cls.teachers.some(t => t.replace(/\s*\(책임\)\s*$/, '') === currentUser.name)
     );
-    const weekDates = getCurrentWeekDates();
+    const weekDates = buildWeekDates(myScheduleWeekMonday);
+    renderMyScheduleWeekNav();
     renderWeekCalendar('myScheduleCalendar', myClasses, 'receipt', weekDates);
     renderMyScheduleReceiptPanel(weekDates);
+  }
+
+  function renderMyScheduleWeekNav() {
+    const nav = document.getElementById('myScheduleWeekNav');
+    const monday = myScheduleWeekMonday;
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const label = `${formatDateLabel(monday)} - ${formatDateLabel(sunday)}`;
+    const prevDisabled = monday <= MIN_WEEK_MONDAY;
+    const nextDisabled = monday >= MAX_WEEK_MONDAY;
+    nav.innerHTML = `
+      <button type="button" class="week-nav-btn" id="prevWeekBtn" ${prevDisabled ? 'disabled' : ''}>◀ 저번주</button>
+      <span class="week-nav-label">${label}</span>
+      <button type="button" class="week-nav-btn" id="nextWeekBtn" ${nextDisabled ? 'disabled' : ''}>다음주 ▶</button>
+    `;
+    if (!prevDisabled) nav.querySelector('#prevWeekBtn').addEventListener('click', () => changeWeek(-7));
+    if (!nextDisabled) nav.querySelector('#nextWeekBtn').addEventListener('click', () => changeWeek(7));
+  }
+
+  function changeWeek(days) {
+    const next = new Date(myScheduleWeekMonday);
+    next.setDate(next.getDate() + days);
+    myScheduleWeekMonday = clampWeekMonday(next);
+    receiptClassId = null;
+    receiptDateKey = null;
+    justRegisteredNames = [];
+    renderMyScheduleCalendar();
   }
 
   function renderMyScheduleReceiptPanel(weekDates) {
@@ -712,20 +837,37 @@
       return;
     }
     const cls = classesData.find(c => c.id === receiptClassId);
-    weekDates = weekDates || getCurrentWeekDates();
-    const dateObj = weekDates[cls.day];
+    weekDates = weekDates || buildWeekDates(myScheduleWeekMonday);
+    const dateObj = cls ? weekDates[cls.day] : null;
     if (!cls || !dateObj || formatDateKey(dateObj) !== receiptDateKey) {
       panel.classList.add('hidden');
       return;
     }
     panel.classList.remove('hidden');
+
+    const existing = getReceiptsForClassDate(cls, dateObj);
+    const existingHtml = existing.map(r => `
+      <div class="receipt-row" data-id="${r.id}">
+        <span class="receipt-row-name">${r.studentName}</span>
+        <span class="receipt-row-meta">${r.holder} · ${r.time}</span>
+        <button type="button" class="receipt-row-remove" data-id="${r.id}" aria-label="삭제">×</button>
+      </div>
+    `).join('');
+
     const registeredHtml = justRegisteredNames.length > 0
       ? `<p class="subtitle" style="margin-top: var(--spacing-sm);">방금 등록됨: ${justRegisteredNames.join(', ')}</p>`
       : '';
+
     panel.innerHTML = `
       <h4>${formatDateLabel(dateObj)}(${cls.day}) ${cls.className} 답안 수령 기록</h4>
+      ${existing.length > 0 ? `
+        <div class="field">
+          <label>등록된 학생 (${existing.length}명)</label>
+          ${existingHtml}
+        </div>
+      ` : ''}
       <div class="field">
-        <label for="receiptStudentNames">학생 이름 (여러 명, 띄어쓰기로 구분)</label>
+        <label for="receiptStudentNames">${existing.length > 0 ? '학생 이름 추가' : '학생 이름'} (여러 명, 띄어쓰기로 구분)</label>
         <input type="text" class="search-input" id="receiptStudentNames" placeholder="예: 홍길동 김철수 이영희" autocomplete="off">
       </div>
       <div class="form-actions">
@@ -740,6 +882,13 @@
       receiptDateKey = null;
       justRegisteredNames = [];
       renderMyScheduleCalendar();
+    });
+    panel.querySelectorAll('.receipt-row-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = parseInt(btn.dataset.id, 10);
+        receiptsData = receiptsData.filter(r => r.id !== id);
+        renderMyScheduleCalendar();
+      });
     });
   }
 
@@ -760,7 +909,7 @@
       });
     });
     justRegisteredNames = names;
-    renderMyScheduleReceiptPanel();
+    renderMyScheduleCalendar();
   }
 
   // ---------- Notices ----------
