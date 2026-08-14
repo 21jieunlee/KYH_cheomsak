@@ -295,14 +295,8 @@
     <h2>로그인</h2>
     <form id="loginForm">
       <div class="field">
-        <label for="nameSelect">이름</label>
-        <select id="nameSelect" class="search-input" required>
-          <option value="">선택하세요</option>
-          <option value="김민지|첨삭진">김민지 (첨삭진)</option>
-          <option value="박서준|첨삭진">박서준 (첨삭진)</option>
-          <option value="이하늘|첨삭진">이하늘 (첨삭진)</option>
-          <option value="정다은|관리쌤">정다은 (관리쌤)</option>
-        </select>
+        <label for="nameInput">이름</label>
+        <input type="text" id="nameInput" class="search-input" placeholder="이름을 입력하세요" autocomplete="off" required>
       </div>
       <div class="field">
         <label>PIN (4자리)</label>
@@ -363,30 +357,57 @@
 
 <script>
   // ---------- Data ----------
+  const TEAM_ROSTER = [
+    { name: '강민서', role: '첨삭진' },
+    { name: '권준형', role: '첨삭진' },
+    { name: '기희진', role: '첨삭진' },
+    { name: '김다영', role: '첨삭진' },
+    { name: '김민이', role: '첨삭진' },
+    { name: '김민주', role: '첨삭진' },
+    { name: '김민혁', role: '첨삭진' },
+    { name: '김세현', role: '첨삭진' },
+    { name: '김소정', role: '첨삭진' },
+    { name: '김지민', role: '첨삭진' },
+    { name: '김지원', role: '첨삭진' },
+    { name: '김지희', role: '첨삭진' },
+    { name: '나선', role: '첨삭진' },
+    { name: '남민정', role: '첨삭진' },
+    { name: '라아영', role: '첨삭진' },
+    { name: '박평호', role: '첨삭진' },
+    { name: '박희경', role: '첨삭진' },
+    { name: '안중석', role: '첨삭진' },
+    { name: '오현지', role: '첨삭진' },
+    { name: '유경현', role: '첨삭진' },
+    { name: '이경근', role: '관리자' },
+    { name: '이지은', role: '관리자' },
+    { name: '이지환', role: '첨삭진' },
+    { name: '임해창', role: '첨삭진' },
+    { name: '정주승', role: '첨삭진' },
+    { name: '천주원', role: '첨삭진' },
+    { name: '최지영', role: '첨삭진' },
+    { name: '허윤서', role: '첨삭진' },
+  ];
+
   let classesData = [
-    { id: 1,  day: '월', academy: '대치 카이로스 201호', time: '14:30-16:30', className: '대치 월2', studentCount: 27, teachers: ['김지원(책임)', '김지희', '이지은'] },
-    { id: 2,  day: '화', academy: '목동 시대인재 W관 201호', time: '14:30-16:30', className: '목동 화2', studentCount: 62, teachers: ['김지원(책임)', '김지희', '김민주', '기희진', '임해창', '허윤서'] },
-    { id: 3,  day: '수', academy: '분당 시대인재 802호', time: '14:30-16:30', className: '분당 수2', studentCount: 20, teachers: ['권준형(책임)', '김지희'] },
-    { id: 4,  day: '금', academy: '대치 시대인재 N관 104호', time: '14:30-16:30', className: '대치 금2', studentCount: 68, teachers: ['최유설(책임)', '김세현', '김지민', '정주승', '기희진', '허윤서', '송해연'] },
-    { id: 5,  day: '토', academy: '대치 시대인재 N관 104호', time: '08:30-10:50', className: '대치 토8', studentCount: 72, teachers: ['정주승(책임)', '김지희', '김민혁', '이지은', '안중석', '강민서', '기희진'] },
-    { id: 6,  day: '토', academy: '대치 명인학원 601호', time: '12:00-14:20', className: '대치 토12', studentCount: 12, teachers: ['안중석', '박평호(책임)', '이지환'] },
-    { id: 7,  day: '토', academy: '대치 카이로스 201호', time: '14:00-16:20', className: '대치 토2', studentCount: 36, teachers: ['박평호(책임)', '김민혁', '정주승', '김민주'] },
-    { id: 8,  day: '일', academy: '분당 시대인재 802호', time: '08:30-10:50', className: '분당 일8', studentCount: 35, teachers: ['나선(책임)', '최지영', '정주승', '남민정'] },
-    { id: 9,  day: '일', academy: '대치 카이로스 201호', time: '14:30-16:30', className: '대치 일2', studentCount: 37, teachers: ['김지원(책임)', '정주승', '송해연', '이지은'] },
-    { id: 10, day: '월', academy: '목동 시대인재 W관 202호', time: '18:00-20:20', className: '목동 월6', studentCount: 56, teachers: ['김민이(책임)', '천주원', '김지희', '유경현', '민지영', '임해창'] },
-    { id: 11, day: '화', academy: '목동 시대인재 W관 202호', time: '18:00-20:20', className: '목동 화6', studentCount: 57, teachers: ['안중석(책임)', '김지원', '유경현', '임해창', '허윤서', '김소정'] },
-    { id: 12, day: '수', academy: '분당 시대인재 802호', time: '18:00-20:20', className: '분당 수6', studentCount: 31, teachers: ['나선(책임)', '최지영', '권준형'] },
-    { id: 13, day: '목', academy: '대치 시대인재 N관 303호', time: '18:00-20:20', className: '대치 목6', studentCount: 54, teachers: ['박평호(책임)', '김세현', '김지민', '김소정', '라아영', '이지환'] },
-    { id: 14, day: '금', academy: '대치 시대인재 N관 104호', time: '18:00-20:20', className: '대치 금6', studentCount: 66, teachers: ['정주승(책임)', '김세현', '김지민', '유경현', '김민주', '임해창'] },
-    { id: 15, day: '토', academy: '목동 시대인재(본관) 예술인회관 606호', time: '18:00-20:20', className: '목동 토6', studentCount: 58, teachers: ['권준형(책임)', '안중석', '김민이', '이지은', '정주승', '김민주'] },
-    { id: 16, day: '일', academy: '목동 시대인재 W관 202호', time: '18:00-20:20', className: '목동 일6', studentCount: 51, teachers: ['이경근(책임)', '천주원', '김지민', '이지은', '김민주', '김세현'] },
+    { id: 1,  day: '토', academy: '대치 시대인재 N관 104호', time: '08:30-10:50', className: '대치 토8', studentCount: 75, teachers: ['정주승(책임)', '김지희', '김민혁', '이지은', '안중석', '강민서', '기희진', '오현지'] },
+    { id: 2,  day: '토', academy: '대치 명인학원 601호', time: '12:00-14:20', className: '대치 토12', studentCount: 11, teachers: ['안중석(책임)', '박평호(책임)', '이지환'] },
+    { id: 3,  day: '토', academy: '대치 카이로스 201호', time: '14:00-16:20', className: '대치 토2', studentCount: 38, teachers: ['박평호(책임)', '김민혁', '정주승', '김민주'] },
+    { id: 4,  day: '토', academy: '목동 시대인재(본관) 예술인회관 606호', time: '18:00-20:20', className: '목동 토6', studentCount: 55, teachers: ['권준형(책임)', '안중석', '김민이', '이지은', '정주승', '김민주'] },
+    { id: 5,  day: '일', academy: '분당 시대인재 802호', time: '08:30-10:50', className: '분당 일8', studentCount: 35, teachers: ['나선(책임)', '최지영', '정주승', '남민정'] },
+    { id: 6,  day: '일', academy: '대치 카이로스 201호', time: '13:30-15:50', className: '대치 일1', studentCount: 18, teachers: ['이지은(책임)', '김지원', '정주승'] },
+    { id: 7,  day: '일', academy: '목동 시대인재 W관 202호', time: '18:00-20:20', className: '목동 일6', studentCount: 51, teachers: ['이경근(책임)', '천주원', '김지민', '이지은', '김민주', '김세현'] },
+    { id: 8,  day: '월', academy: '목동 시대인재 W관 202호', time: '18:00-20:20', className: '목동 월6', studentCount: 70, teachers: ['김민이(책임)', '천주원', '김지희', '유경현', '임해창', '박희경', '정주승', '오현지'] },
+    { id: 9,  day: '화', academy: '목동 시대인재 W관 202호', time: '18:00-20:20', className: '목동 화6', studentCount: 76, teachers: ['안중석(책임)', '김지원', '유경현', '임해창', '허윤서', '김소정', '오현지', '기희진', '김다영'] },
+    { id: 10, day: '수', academy: '분당 시대인재 802호', time: '18:00-20:20', className: '분당 수6', studentCount: 37, teachers: ['정주승(책임)', '최지영', '권준형', '나선'] },
+    { id: 11, day: '목', academy: '대치 시대인재 N관 303호', time: '18:00-20:20', className: '대치 목6', studentCount: 54, teachers: ['박평호(책임)', '김세현', '김지민', '김소정', '라아영'] },
+    { id: 12, day: '금', academy: '대치 시대인재 N관 104호', time: '18:00-20:20', className: '대치 금6', studentCount: 65, teachers: ['정주승(책임)', '김세현', '김지민', '유경현', '김민주', '임해창'] },
   ];
   const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
   let editingClassId = null;
 
   let noticesData = [
-    { id: 1, title: '8월 3주차 시간표 안내', content: '8/18(월)부터 강남학원 고3반 시간이 18:00 → 18:30으로 변경됩니다. 참고 부탁드려요.', date: '8/11', author: '정다은' },
-    { id: 2, title: '답안지 수령 후 등록 꼭 부탁드립니다', content: '답안지 받으신 직후 수령 현황에 바로 등록해주세요. 학생 문의가 늘고 있습니다.', date: '8/9', author: '정다은' },
+    { id: 1, title: '8월 3주차 시간표 안내', content: '8/18(월)부터 강남학원 고3반 시간이 18:00 → 18:30으로 변경됩니다. 참고 부탁드려요.', date: '8/11', author: '이경근' },
+    { id: 2, title: '답안지 수령 후 등록 꼭 부탁드립니다', content: '답안지 받으신 직후 수령 현황에 바로 등록해주세요. 학생 문의가 늘고 있습니다.', date: '8/9', author: '이경근' },
   ];
   let noticeIdCounter = noticesData.length;
   let editingNoticeId = null;
@@ -403,7 +424,7 @@
 
   // ---------- Element refs ----------
   const loginForm = document.getElementById('loginForm');
-  const nameSelect = document.getElementById('nameSelect');
+  const nameInput = document.getElementById('nameInput');
   const pinInputs = Array.from(document.querySelectorAll('.pin-input'));
   const loginBtn = document.getElementById('loginBtn');
   const errorMessage = document.getElementById('errorMessage');
@@ -446,10 +467,10 @@
   // ---------- Login ----------
   function updateButtonState() {
     const pinFilled = pinInputs.every(input => input.value.length === 1);
-    loginBtn.disabled = !(nameSelect.value && pinFilled);
+    loginBtn.disabled = !(nameInput.value.trim() && pinFilled);
   }
 
-  nameSelect.addEventListener('change', updateButtonState);
+  nameInput.addEventListener('input', updateButtonState);
 
   pinInputs.forEach((input, idx) => {
     input.addEventListener('input', () => {
@@ -464,9 +485,15 @@
 
   loginForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (!nameSelect.value) return;
-    const [name, role] = nameSelect.value.split('|');
-    currentUser = { name, role };
+    const typedName = nameInput.value.trim();
+    if (!typedName) return;
+    const match = TEAM_ROSTER.find(person => person.name === typedName);
+    if (!match) {
+      errorMessage.textContent = '등록되지 않은 이름입니다. 이름을 다시 확인해주세요.';
+      return;
+    }
+    errorMessage.textContent = '';
+    currentUser = { name: match.name, role: match.role };
     editingClassId = null;
     editingNoticeId = null;
     appNav.classList.remove('hidden');
@@ -546,7 +573,7 @@
   }
 
   function renderHomeCalendar() {
-    const isAdmin = currentUser && currentUser.role === '관리쌤';
+    const isAdmin = currentUser && currentUser.role === '관리자';
     document.getElementById('homeGreeting').textContent = '이번 주 수업';
     renderWeekCalendar('weekCalendar', classesData, isAdmin);
     renderHomeEditPanel();
@@ -629,7 +656,7 @@
   }
 
   function renderNoticeList() {
-    const isAdmin = currentUser && currentUser.role === '관리쌤';
+    const isAdmin = currentUser && currentUser.role === '관리자';
     noticeForm.classList.toggle('hidden', !isAdmin);
 
     const container = document.getElementById('noticeListContainer');
