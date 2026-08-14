@@ -937,6 +937,7 @@
 
     panel.innerHTML = `
       <h4>${formatDateLabel(dateObj)}(${cls.day}) ${cls.className} 답안 수령 기록</h4>
+      <p class="subtitle" style="margin-bottom: var(--spacing-lg);">이 목록은 ${formatDateLabel(dateObj)}에 첨삭한 학생이 아니라, 수업 종료 후 새로 수령한 답안지 명단입니다. (학생이 답안을 작성한 날짜 기준)</p>
       ${existing.length > 0 ? `
         <div class="field">
           <label>등록된 학생 (${existing.length}명)</label>
