@@ -481,6 +481,27 @@
     { id: 11, day: '목', academy: '대치 시대인재 N관 303호', time: '18:00-20:20', className: '대치 목6', studentCount: 54, teachers: ['박평호(책임)', '김세현', '김지민', '김소정', '라아영'] },
     { id: 12, day: '금', academy: '대치 시대인재 N관 104호', time: '18:00-20:20', className: '대치 금6', studentCount: 65, teachers: ['정주승(책임)', '김세현', '김지민', '유경현', '김민주', '임해창'] },
   ];
+
+  // 8/3~8/14 기간에 적용되는 이전 시간표 패턴 (15차). 8/15부터는 위 classesData(18차)를 사용.
+  let classesData15ch = [
+    { id: 101, day: '월', academy: '대치 카이로스 201호', time: '14:30-16:30', className: '대치 월2', studentCount: 27, teachers: ['김지원(책임)', '김지희', '이지은'] },
+    { id: 102, day: '화', academy: '목동 시대인재 W관 201호', time: '14:30-16:30', className: '목동 화2', studentCount: 62, teachers: ['김지원(책임)', '김지희', '김민주', '기희진', '임해창', '허윤서'] },
+    { id: 103, day: '수', academy: '분당 시대인재 802호', time: '14:30-16:30', className: '분당 수2', studentCount: 20, teachers: ['권준형(책임)', '김지희'] },
+    { id: 104, day: '금', academy: '대치 시대인재 N관 104호', time: '14:30-16:30', className: '대치 금2', studentCount: 68, teachers: ['최유설(책임)', '김세현', '김지민', '정주승', '기희진', '허윤서', '송해연'] },
+    { id: 105, day: '토', academy: '대치 시대인재 N관 104호', time: '08:30-10:50', className: '대치 토8', studentCount: 72, teachers: ['정주승(책임)', '김지희', '김민혁', '이지은', '안중석', '강민서', '기희진'] },
+    { id: 106, day: '토', academy: '대치 명인학원 601호', time: '12:00-14:20', className: '대치 토12', studentCount: 12, teachers: ['안중석(책임)', '박평호(책임)', '이지환'] },
+    { id: 107, day: '토', academy: '대치 카이로스 201호', time: '14:00-16:20', className: '대치 토2', studentCount: 36, teachers: ['박평호(책임)', '김민혁', '정주승', '김민주'] },
+    { id: 108, day: '토', academy: '목동 시대인재(본관) 예술인회관 606호', time: '18:00-20:20', className: '목동 토6', studentCount: 58, teachers: ['권준형(책임)', '안중석', '김민이', '이지은', '정주승', '김민주'] },
+    { id: 109, day: '일', academy: '분당 시대인재 802호', time: '08:30-10:50', className: '분당 일8', studentCount: 35, teachers: ['나선(책임)', '최지영', '정주승', '남민정'] },
+    { id: 110, day: '일', academy: '대치 카이로스 201호', time: '14:30-16:30', className: '대치 일2', studentCount: 37, teachers: ['김지원(책임)', '정주승', '송해연', '이지은'] },
+    { id: 111, day: '일', academy: '목동 시대인재 W관 202호', time: '18:00-20:20', className: '목동 일6', studentCount: 51, teachers: ['이경근(책임)', '천주원', '김지민', '이지은', '김민주', '김세현'] },
+    { id: 112, day: '월', academy: '목동 시대인재 W관 202호', time: '18:00-20:20', className: '목동 월6', studentCount: 56, teachers: ['김민이(책임)', '천주원', '김지희', '유경현', '민지영', '임해창'] },
+    { id: 113, day: '화', academy: '목동 시대인재 W관 202호', time: '18:00-20:20', className: '목동 화6', studentCount: 57, teachers: ['안중석(책임)', '김지원', '유경현', '임해창', '허윤서', '김소정'] },
+    { id: 114, day: '수', academy: '분당 시대인재 802호', time: '18:00-20:20', className: '분당 수6', studentCount: 31, teachers: ['나선(책임)', '최지영', '권준형'] },
+    { id: 115, day: '목', academy: '대치 시대인재 N관 303호', time: '18:00-20:20', className: '대치 목6', studentCount: 54, teachers: ['박평호(책임)', '김세현', '김지민', '김소정', '라아영', '이지환'] },
+    { id: 116, day: '금', academy: '대치 시대인재 N관 104호', time: '18:00-20:20', className: '대치 금6', studentCount: 66, teachers: ['정주승(책임)', '김세현', '김지민', '유경현', '김민주', '임해창'] },
+  ];
+
   const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
   let editingClassId = null;
 
@@ -541,6 +562,26 @@
   const SCHEDULE_MAX_DATE = new Date(SCHEDULE_RANGE_YEAR, 8, 13);
   const MIN_WEEK_MONDAY = getMondayOfWeek(SCHEDULE_MIN_DATE);
   const MAX_WEEK_MONDAY = getMondayOfWeek(SCHEDULE_MAX_DATE);
+
+  // 8/15부터 classesData(18차) 패턴 적용, 그 이전(8/3~8/14)은 classesData15ch(15차) 패턴 적용
+  const SCHEDULE_SPLIT_DATE = new Date(SCHEDULE_RANGE_YEAR, 7, 15);
+
+  function findClassById(id) {
+    return classesData.find(c => c.id === id) || classesData15ch.find(c => c.id === id);
+  }
+
+  function getMyClassesForWeek(weekDates) {
+    const result = [];
+    WEEKDAYS.forEach(day => {
+      const dateObj = weekDates[day];
+      const source = dateObj < SCHEDULE_SPLIT_DATE ? classesData15ch : classesData;
+      source
+        .filter(cls => cls.day === day
+          && cls.teachers.some(t => t.replace(/\s*\(책임\)\s*$/, '') === currentUser.name))
+        .forEach(cls => result.push(cls));
+    });
+    return result;
+  }
 
   function clampWeekMonday(monday) {
     if (monday < MIN_WEEK_MONDAY) return new Date(MIN_WEEK_MONDAY);
@@ -828,10 +869,8 @@
     if (!myScheduleWeekMonday) {
       myScheduleWeekMonday = clampWeekMonday(getMondayOfWeek(new Date()));
     }
-    const myClasses = classesData.filter(cls =>
-      cls.teachers.some(t => t.replace(/\s*\(책임\)\s*$/, '') === currentUser.name)
-    );
     const weekDates = buildWeekDates(myScheduleWeekMonday);
+    const myClasses = getMyClassesForWeek(weekDates);
     renderMyScheduleWeekNav();
     renderWeekCalendar('myScheduleCalendar', myClasses, 'receipt', weekDates);
     renderMyScheduleReceiptPanel(weekDates);
@@ -871,7 +910,7 @@
       panel.innerHTML = '';
       return;
     }
-    const cls = classesData.find(c => c.id === receiptClassId);
+    const cls = findClassById(receiptClassId);
     weekDates = weekDates || buildWeekDates(myScheduleWeekMonday);
     const dateObj = cls ? weekDates[cls.day] : null;
     if (!cls || !dateObj || formatDateKey(dateObj) !== receiptDateKey) {
@@ -1093,7 +1132,8 @@
       return;
     }
     const dayLabel = weekdayLabelOf(dateObj);
-    const options = classesData.filter(c => c.day === dayLabel);
+    const source = dateObj < SCHEDULE_SPLIT_DATE ? classesData15ch : classesData;
+    const options = source.filter(c => c.day === dayLabel);
     if (options.length === 0) {
       receiptClassSelect.innerHTML = '<option value="">해당 날짜에 수업이 없습니다</option>';
       receiptClassSelect.disabled = true;
@@ -1121,7 +1161,7 @@
       container.innerHTML = '<p class="subtitle">날짜와 수업을 선택하면 수령 기록을 볼 수 있습니다.</p>';
       return;
     }
-    const cls = classesData.find(c => c.id === receiptsFilterClassId);
+    const cls = findClassById(receiptsFilterClassId);
     const dateObj = parseDateInputValue(receiptsFilterDateValue);
     let records = getReceiptsForClassDate(cls, dateObj);
     if (receiptsSearchQuery) {
