@@ -343,6 +343,7 @@
   <div class="card card--calendar">
     <h3>내 시간표</h3>
     <div class="week-calendar" id="myScheduleCalendar"></div>
+    <div class="home-edit-panel hidden" id="myScheduleReceiptPanel"></div>
   </div>
 </div>
 
@@ -405,6 +406,39 @@
   const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
   let editingClassId = null;
 
+  // ---------- Date helpers (real week calendar) ----------
+  function getCurrentWeekDates(baseDate = new Date()) {
+    const day = baseDate.getDay(); // 0=Sun..6=Sat
+    const diffToMonday = (day === 0) ? -6 : 1 - day;
+    const monday = new Date(baseDate);
+    monday.setHours(0, 0, 0, 0);
+    monday.setDate(baseDate.getDate() + diffToMonday);
+    const dates = {};
+    WEEKDAYS.forEach((label, idx) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + idx);
+      dates[label] = d;
+    });
+    return dates;
+  }
+
+  function formatDateLabel(d) {
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+
+  function formatDateKey(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function formatTimestampLabel(d) {
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${formatDateLabel(d)} ${h}:${min}`;
+  }
+
   let noticesData = [
     { id: 1, title: '8월 3주차 시간표 안내', content: '8/18(월)부터 강남학원 고3반 시간이 18:00 → 18:30으로 변경됩니다. 참고 부탁드려요.', date: '8/11', author: '이경근' },
     { id: 2, title: '답안지 수령 후 등록 꼭 부탁드립니다', content: '답안지 받으신 직후 수령 현황에 바로 등록해주세요. 학생 문의가 늘고 있습니다.', date: '8/9', author: '이경근' },
@@ -413,14 +447,18 @@
   let editingNoticeId = null;
 
   let receiptsData = [
-    { id: 1, className: '고3반', studentName: '최지우', holder: '김민지', time: '8/13 18:45' },
-    { id: 2, className: '고3반', studentName: '한서연', holder: '김민지', time: '8/13 18:47' },
-    { id: 3, className: '고2반', studentName: '정우진', holder: '이하늘', time: '8/14 19:20' },
-    { id: 4, className: '고1반', studentName: '배소민', holder: '박서준', time: '8/15 17:30' },
-    { id: 5, className: '고2반', studentName: '강태윤', holder: '박서준', time: '8/16 16:40' },
+    { id: 1, date: '8/13', className: '고3반', studentName: '최지우', holder: '김민지', time: '8/13 18:45' },
+    { id: 2, date: '8/13', className: '고3반', studentName: '한서연', holder: '김민지', time: '8/13 18:47' },
+    { id: 3, date: '8/14', className: '고2반', studentName: '정우진', holder: '이하늘', time: '8/14 19:20' },
+    { id: 4, date: '8/15', className: '고1반', studentName: '배소민', holder: '박서준', time: '8/15 17:30' },
+    { id: 5, date: '8/16', className: '고2반', studentName: '강태윤', holder: '박서준', time: '8/16 16:40' },
   ];
+  let receiptIdCounter = receiptsData.reduce((max, r) => Math.max(max, r.id), 0);
 
   let currentUser = null;
+  let receiptClassId = null;
+  let receiptDateKey = null;
+  let justRegisteredNames = [];
 
   // ---------- Element refs ----------
   const loginForm = document.getElementById('loginForm');
@@ -496,6 +534,9 @@
     currentUser = { name: match.name, role: match.role };
     editingClassId = null;
     editingNoticeId = null;
+    receiptClassId = null;
+    receiptDateKey = null;
+    justRegisteredNames = [];
     appNav.classList.remove('hidden');
     adjustBodyPadding();
     goToScreen('screen-home');
@@ -505,6 +546,9 @@
     currentUser = null;
     editingClassId = null;
     editingNoticeId = null;
+    receiptClassId = null;
+    receiptDateKey = null;
+    justRegisteredNames = [];
     loginForm.reset();
     pinInputs.forEach(input => input.value = '');
     errorMessage.textContent = '';
@@ -526,10 +570,13 @@
       .join(', ');
   }
 
-  function buildClassCard(cls, editable) {
+  function buildClassCard(cls, mode, dateObj) {
     const card = document.createElement('div');
-    const isActive = editable && editingClassId === cls.id;
-    card.className = 'class-card' + (editable ? ' class-card--editable' : '') + (isActive ? ' class-card--active' : '');
+    const dateKey = dateObj ? formatDateKey(dateObj) : null;
+    const isActive = (mode === 'admin' && editingClassId === cls.id)
+      || (mode === 'receipt' && receiptClassId === cls.id && receiptDateKey === dateKey);
+    const clickable = mode === 'admin' || mode === 'receipt';
+    card.className = 'class-card' + (clickable ? ' class-card--editable' : '') + (isActive ? ' class-card--active' : '');
     card.innerHTML = `
       <div class="class-name">${cls.className}</div>
       <div class="class-location">${cls.academy}</div>
@@ -537,25 +584,39 @@
       <div class="class-meta">학생 ${cls.studentCount}명</div>
       <div class="class-teachers">${formatTeachersHtml(cls.teachers)}</div>
     `;
-    if (editable) {
+    if (mode === 'admin') {
       card.addEventListener('click', () => {
         editingClassId = (editingClassId === cls.id) ? null : cls.id;
         renderHomeCalendar();
+      });
+    } else if (mode === 'receipt') {
+      card.addEventListener('click', () => {
+        if (receiptClassId === cls.id && receiptDateKey === dateKey) {
+          receiptClassId = null;
+          receiptDateKey = null;
+        } else {
+          receiptClassId = cls.id;
+          receiptDateKey = dateKey;
+        }
+        justRegisteredNames = [];
+        renderMyScheduleCalendar();
       });
     }
     return card;
   }
 
-  function renderWeekCalendar(containerId, classList, editable) {
+  function renderWeekCalendar(containerId, classList, mode, weekDates) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
     WEEKDAYS.forEach(day => {
       const dayCol = document.createElement('div');
       dayCol.className = 'week-day';
 
+      const dateObj = weekDates ? weekDates[day] : null;
+
       const header = document.createElement('div');
       header.className = 'week-day-header';
-      header.textContent = day;
+      header.textContent = dateObj ? `${day} ${formatDateLabel(dateObj)}` : day;
       dayCol.appendChild(header);
 
       const dayClasses = classList.filter(c => c.day === day);
@@ -565,7 +626,7 @@
         empty.textContent = '수업 없음';
         dayCol.appendChild(empty);
       } else {
-        dayClasses.forEach(cls => dayCol.appendChild(buildClassCard(cls, editable)));
+        dayClasses.forEach(cls => dayCol.appendChild(buildClassCard(cls, mode, dateObj)));
       }
 
       container.appendChild(dayCol);
@@ -575,7 +636,7 @@
   function renderHomeCalendar() {
     const isAdmin = currentUser && currentUser.role === '관리자';
     document.getElementById('homeGreeting').textContent = '이번 주 수업';
-    renderWeekCalendar('weekCalendar', classesData, isAdmin);
+    renderWeekCalendar('weekCalendar', classesData, isAdmin ? 'admin' : null);
     renderHomeEditPanel();
   }
 
@@ -638,7 +699,68 @@
     const myClasses = classesData.filter(cls =>
       cls.teachers.some(t => t.replace(/\s*\(책임\)\s*$/, '') === currentUser.name)
     );
-    renderWeekCalendar('myScheduleCalendar', myClasses, false);
+    const weekDates = getCurrentWeekDates();
+    renderWeekCalendar('myScheduleCalendar', myClasses, 'receipt', weekDates);
+    renderMyScheduleReceiptPanel(weekDates);
+  }
+
+  function renderMyScheduleReceiptPanel(weekDates) {
+    const panel = document.getElementById('myScheduleReceiptPanel');
+    if (receiptClassId === null) {
+      panel.classList.add('hidden');
+      panel.innerHTML = '';
+      return;
+    }
+    const cls = classesData.find(c => c.id === receiptClassId);
+    weekDates = weekDates || getCurrentWeekDates();
+    const dateObj = weekDates[cls.day];
+    if (!cls || !dateObj || formatDateKey(dateObj) !== receiptDateKey) {
+      panel.classList.add('hidden');
+      return;
+    }
+    panel.classList.remove('hidden');
+    const registeredHtml = justRegisteredNames.length > 0
+      ? `<p class="subtitle" style="margin-top: var(--spacing-sm);">방금 등록됨: ${justRegisteredNames.join(', ')}</p>`
+      : '';
+    panel.innerHTML = `
+      <h4>${formatDateLabel(dateObj)}(${cls.day}) ${cls.className} 답안 수령 기록</h4>
+      <div class="field">
+        <label for="receiptStudentNames">학생 이름 (여러 명, 띄어쓰기로 구분)</label>
+        <input type="text" class="search-input" id="receiptStudentNames" placeholder="예: 홍길동 김철수 이영희" autocomplete="off">
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-primary" id="registerReceiptBtn">등록</button>
+        <button type="button" class="btn btn-secondary" id="cancelReceiptBtn">닫기</button>
+      </div>
+      ${registeredHtml}
+    `;
+    panel.querySelector('#registerReceiptBtn').addEventListener('click', () => registerReceipt(cls, dateObj));
+    panel.querySelector('#cancelReceiptBtn').addEventListener('click', () => {
+      receiptClassId = null;
+      receiptDateKey = null;
+      justRegisteredNames = [];
+      renderMyScheduleCalendar();
+    });
+  }
+
+  function registerReceipt(cls, dateObj) {
+    const input = document.getElementById('receiptStudentNames');
+    const names = input.value.trim().split(/\s+/).filter(Boolean);
+    if (names.length === 0) return;
+    const timestamp = formatTimestampLabel(new Date());
+    names.forEach(name => {
+      receiptIdCounter++;
+      receiptsData.push({
+        id: receiptIdCounter,
+        date: formatDateLabel(dateObj),
+        className: cls.className,
+        studentName: name,
+        holder: currentUser.name,
+        time: timestamp,
+      });
+    });
+    justRegisteredNames = names;
+    renderMyScheduleReceiptPanel();
   }
 
   // ---------- Notices ----------
@@ -756,8 +878,9 @@
       container.innerHTML = '<p class="subtitle">등록된 수령 현황이 없습니다.</p>';
       return;
     }
-    const rows = receiptsData.map(r => `
+    const rows = receiptsData.slice().reverse().map(r => `
       <tr>
+        <td>${r.date}</td>
         <td>${r.className}</td>
         <td>${r.studentName}</td>
         <td>${r.holder}</td>
@@ -767,7 +890,7 @@
     container.innerHTML = `
       <table class="receipt-table">
         <thead>
-          <tr><th>수업</th><th>학생</th><th>소지자</th><th>수령 시각</th></tr>
+          <tr><th>수업일</th><th>수업</th><th>학생</th><th>소지자</th><th>등록 시각</th></tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
