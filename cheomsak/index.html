@@ -414,6 +414,20 @@
 <div id="screen-receipts" class="screen">
   <div class="card card--wide">
     <h3>수령 현황</h3>
+    <div class="field">
+      <label for="receiptDateSelect">날짜</label>
+      <input type="date" class="search-input" id="receiptDateSelect">
+    </div>
+    <div class="field">
+      <label for="receiptClassSelect">수업</label>
+      <select class="search-input" id="receiptClassSelect" disabled>
+        <option value="">날짜를 먼저 선택하세요</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="receiptSearchInput">학생 이름 검색</label>
+      <input type="text" class="search-input" id="receiptSearchInput" placeholder="학생 이름으로 검색" autocomplete="off">
+    </div>
     <div id="receiptsContainer"></div>
   </div>
 </div>
@@ -501,6 +515,15 @@
     return `${y}-${m}-${day}`;
   }
 
+  function parseDateInputValue(value) {
+    const [y, m, d] = value.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  function weekdayLabelOf(date) {
+    return ['일', '월', '화', '수', '목', '금', '토'][date.getDay()];
+  }
+
   function formatTimestampLabel(d) {
     const h = String(d.getHours()).padStart(2, '0');
     const min = String(d.getMinutes()).padStart(2, '0');
@@ -514,8 +537,10 @@
 
   // 시간표가 고정되어 있는 기간: 8/3 ~ 9/13 (해당 기간 내 주 단위로만 이동 가능)
   const SCHEDULE_RANGE_YEAR = new Date().getFullYear();
-  const MIN_WEEK_MONDAY = getMondayOfWeek(new Date(SCHEDULE_RANGE_YEAR, 7, 3));
-  const MAX_WEEK_MONDAY = getMondayOfWeek(new Date(SCHEDULE_RANGE_YEAR, 8, 13));
+  const SCHEDULE_MIN_DATE = new Date(SCHEDULE_RANGE_YEAR, 7, 3);
+  const SCHEDULE_MAX_DATE = new Date(SCHEDULE_RANGE_YEAR, 8, 13);
+  const MIN_WEEK_MONDAY = getMondayOfWeek(SCHEDULE_MIN_DATE);
+  const MAX_WEEK_MONDAY = getMondayOfWeek(SCHEDULE_MAX_DATE);
 
   function clampWeekMonday(monday) {
     if (monday < MIN_WEEK_MONDAY) return new Date(MIN_WEEK_MONDAY);
@@ -533,11 +558,11 @@
   let editingNoticeId = null;
 
   let receiptsData = [
-    { id: 1, date: '8/13', className: '고3반', studentName: '최지우', holder: '김민지', time: '8/13 18:45' },
-    { id: 2, date: '8/13', className: '고3반', studentName: '한서연', holder: '김민지', time: '8/13 18:47' },
-    { id: 3, date: '8/14', className: '고2반', studentName: '정우진', holder: '이하늘', time: '8/14 19:20' },
-    { id: 4, date: '8/15', className: '고1반', studentName: '배소민', holder: '박서준', time: '8/15 17:30' },
-    { id: 5, date: '8/16', className: '고2반', studentName: '강태윤', holder: '박서준', time: '8/16 16:40' },
+    { id: 1, date: '8/14', className: '대치 금6', studentName: '최지우', holder: '정주승', time: '8/14 18:45' },
+    { id: 2, date: '8/14', className: '대치 금6', studentName: '한서연', holder: '정주승', time: '8/14 18:47' },
+    { id: 3, date: '8/13', className: '대치 목6', studentName: '정우진', holder: '박평호', time: '8/13 19:20' },
+    { id: 4, date: '8/15', className: '대치 토8', studentName: '배소민', holder: '정주승', time: '8/15 09:30' },
+    { id: 5, date: '8/16', className: '분당 일8', studentName: '강태윤', holder: '나선', time: '8/16 09:40' },
   ];
   let receiptIdCounter = receiptsData.reduce((max, r) => Math.max(max, r.id), 0);
 
@@ -545,6 +570,10 @@
   let receiptClassId = null;
   let receiptDateKey = null;
   let justRegisteredNames = [];
+
+  let receiptsFilterDateValue = '';
+  let receiptsFilterClassId = null;
+  let receiptsSearchQuery = '';
 
   // ---------- Element refs ----------
   const loginForm = document.getElementById('loginForm');
@@ -624,6 +653,9 @@
     receiptDateKey = null;
     justRegisteredNames = [];
     myScheduleWeekMonday = null;
+    receiptsFilterDateValue = '';
+    receiptsFilterClassId = null;
+    receiptsSearchQuery = '';
     appNav.classList.remove('hidden');
     adjustBodyPadding();
     goToScreen('screen-home');
@@ -637,6 +669,9 @@
     receiptDateKey = null;
     justRegisteredNames = [];
     myScheduleWeekMonday = null;
+    receiptsFilterDateValue = '';
+    receiptsFilterClassId = null;
+    receiptsSearchQuery = '';
     loginForm.reset();
     pinInputs.forEach(input => input.value = '');
     errorMessage.textContent = '';
@@ -874,6 +909,7 @@
         <button type="button" class="btn btn-primary" id="registerReceiptBtn">등록</button>
         <button type="button" class="btn btn-secondary" id="cancelReceiptBtn">닫기</button>
       </div>
+      <button type="button" class="btn btn-secondary" id="viewInReceiptsBtn">수령 현황 탭에서 보기</button>
       ${registeredHtml}
     `;
     panel.querySelector('#registerReceiptBtn').addEventListener('click', () => registerReceipt(cls, dateObj));
@@ -882,6 +918,12 @@
       receiptDateKey = null;
       justRegisteredNames = [];
       renderMyScheduleCalendar();
+    });
+    panel.querySelector('#viewInReceiptsBtn').addEventListener('click', () => {
+      receiptsFilterDateValue = formatDateKey(dateObj);
+      receiptsFilterClassId = cls.id;
+      receiptsSearchQuery = '';
+      goToScreen('screen-receipts');
     });
     panel.querySelectorAll('.receipt-row-remove').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1021,16 +1063,76 @@
   }
 
   // ---------- Receipts ----------
-  function renderReceipts() {
-    const container = document.getElementById('receiptsContainer');
-    if (receiptsData.length === 0) {
-      container.innerHTML = '<p class="subtitle">등록된 수령 현황이 없습니다.</p>';
+  const receiptDateSelect = document.getElementById('receiptDateSelect');
+  const receiptClassSelect = document.getElementById('receiptClassSelect');
+  const receiptSearchInput = document.getElementById('receiptSearchInput');
+
+  receiptDateSelect.min = formatDateKey(SCHEDULE_MIN_DATE);
+  receiptDateSelect.max = formatDateKey(SCHEDULE_MAX_DATE);
+
+  receiptDateSelect.addEventListener('change', () => {
+    receiptsFilterDateValue = receiptDateSelect.value;
+    receiptsFilterClassId = null;
+    renderReceipts();
+  });
+
+  receiptClassSelect.addEventListener('change', () => {
+    receiptsFilterClassId = receiptClassSelect.value ? parseInt(receiptClassSelect.value, 10) : null;
+    renderReceiptsTable();
+  });
+
+  receiptSearchInput.addEventListener('input', () => {
+    receiptsSearchQuery = receiptSearchInput.value.trim();
+    renderReceiptsTable();
+  });
+
+  function populateReceiptClassOptions(dateObj) {
+    if (!dateObj) {
+      receiptClassSelect.innerHTML = '<option value="">날짜를 먼저 선택하세요</option>';
+      receiptClassSelect.disabled = true;
       return;
     }
-    const rows = receiptsData.slice().reverse().map(r => `
+    const dayLabel = weekdayLabelOf(dateObj);
+    const options = classesData.filter(c => c.day === dayLabel);
+    if (options.length === 0) {
+      receiptClassSelect.innerHTML = '<option value="">해당 날짜에 수업이 없습니다</option>';
+      receiptClassSelect.disabled = true;
+      return;
+    }
+    receiptClassSelect.disabled = false;
+    receiptClassSelect.innerHTML = '<option value="">수업을 선택하세요</option>'
+      + options.map(c => `<option value="${c.id}">${c.className} (${c.time})</option>`).join('');
+  }
+
+  function renderReceipts() {
+    receiptDateSelect.value = receiptsFilterDateValue;
+    const dateObj = receiptsFilterDateValue ? parseDateInputValue(receiptsFilterDateValue) : null;
+    populateReceiptClassOptions(dateObj);
+    if (receiptsFilterClassId !== null) {
+      receiptClassSelect.value = String(receiptsFilterClassId);
+    }
+    receiptSearchInput.value = receiptsSearchQuery;
+    renderReceiptsTable();
+  }
+
+  function renderReceiptsTable() {
+    const container = document.getElementById('receiptsContainer');
+    if (!receiptsFilterDateValue || receiptsFilterClassId === null) {
+      container.innerHTML = '<p class="subtitle">날짜와 수업을 선택하면 수령 기록을 볼 수 있습니다.</p>';
+      return;
+    }
+    const cls = classesData.find(c => c.id === receiptsFilterClassId);
+    const dateObj = parseDateInputValue(receiptsFilterDateValue);
+    let records = getReceiptsForClassDate(cls, dateObj);
+    if (receiptsSearchQuery) {
+      records = records.filter(r => r.studentName.includes(receiptsSearchQuery));
+    }
+    if (records.length === 0) {
+      container.innerHTML = '<p class="subtitle">등록된 수령 기록이 없습니다.</p>';
+      return;
+    }
+    const rows = records.map(r => `
       <tr>
-        <td>${r.date}</td>
-        <td>${r.className}</td>
         <td>${r.studentName}</td>
         <td>${r.holder}</td>
         <td>${r.time}</td>
@@ -1039,7 +1141,7 @@
     container.innerHTML = `
       <table class="receipt-table">
         <thead>
-          <tr><th>수업일</th><th>수업</th><th>학생</th><th>소지자</th><th>등록 시각</th></tr>
+          <tr><th>학생</th><th>가져간 첨삭진</th><th>등록 시각</th></tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
