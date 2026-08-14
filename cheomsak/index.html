@@ -1149,6 +1149,18 @@
     { id: 540, date: '8/9', className: '대치 일2', studentName: '전윤서', holder: '김지원', time: '8/9' },
     { id: 541, date: '8/9', className: '대치 일2', studentName: '전채인', holder: '김지원', time: '8/9' },
   ];
+
+  const RECEIPTS_STORAGE_KEY = 'cheomsak_receiptsData';
+
+  function saveReceiptsData() {
+    localStorage.setItem(RECEIPTS_STORAGE_KEY, JSON.stringify(receiptsData));
+  }
+
+  const storedReceiptsData = localStorage.getItem(RECEIPTS_STORAGE_KEY);
+  if (storedReceiptsData) {
+    receiptsData = JSON.parse(storedReceiptsData);
+  }
+
   let receiptIdCounter = receiptsData.reduce((max, r) => Math.max(max, r.id), 0);
 
   let currentUser = null;
@@ -1513,6 +1525,7 @@
       btn.addEventListener('click', () => {
         const id = parseInt(btn.dataset.id, 10);
         receiptsData = receiptsData.filter(r => r.id !== id);
+        saveReceiptsData();
         renderMyScheduleCalendar();
       });
     });
@@ -1534,6 +1547,7 @@
         time: timestamp,
       });
     });
+    saveReceiptsData();
     justRegisteredNames = names;
     renderMyScheduleCalendar();
   }
