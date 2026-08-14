@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>첨삭진 관리 - 로그인</title>
+<style>
+  :root {
+    --primary: #4a154b;
+    --primary-press: #611f69;
+    --on-primary: #ffffff;
+    --ink: #1d1d1d;
+    --ink-mute: #696969;
+    --canvas: #ffffff;
+    --canvas-lavender: #f9f0ff;
+    --hairline: #e6e6e6;
+    --error: #cc4117;
+
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 20px;
+    --spacing-xxl: 24px;
+    --spacing-huge: 28px;
+
+    --rounded-sm: 4px;
+    --rounded-pill: 90px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
+
+  body {
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--ink);
+    background-color: var(--canvas-lavender);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl);
+  }
+
+  .login-card {
+    width: 100%;
+    max-width: 360px;
+    background-color: var(--canvas);
+    border: 1px solid var(--hairline);
+    border-radius: 16px;
+    padding: var(--spacing-huge) var(--spacing-xxl);
+  }
+
+  .login-card h1 {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.33;
+    letter-spacing: -0.096px;
+    margin: 0 0 var(--spacing-xs);
+    text-align: center;
+  }
+
+  .login-card .subtitle {
+    font-size: 14px;
+    line-height: 1.43;
+    letter-spacing: 0.1px;
+    color: var(--ink-mute);
+    text-align: center;
+    margin: 0 0 var(--spacing-xxl);
+  }
+
+  .field {
+    margin-bottom: var(--spacing-xl);
+  }
+
+  label {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.16px;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  select {
+    width: 100%;
+    min-height: 48px;
+    font-family: inherit;
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--ink);
+    background-color: var(--canvas);
+    border: 1px solid var(--hairline);
+    border-radius: var(--rounded-sm);
+    padding: 10px 12px;
+  }
+
+  select:focus,
+  .pin-input:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+  }
+
+  .pin-group {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: space-between;
+  }
+
+  .pin-input {
+    width: 100%;
+    height: 56px;
+    min-width: 48px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    background-color: var(--canvas);
+    border: 1px solid var(--hairline);
+    border-radius: var(--rounded-sm);
+  }
+
+  .error-message {
+    font-size: 14px;
+    line-height: 1.43;
+    letter-spacing: 0.1px;
+    color: var(--error);
+    min-height: 20px;
+    margin-bottom: var(--spacing-md);
+  }
+
+  .welcome-message {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.16px;
+    color: var(--primary);
+    text-align: center;
+    padding: var(--spacing-lg);
+    background-color: var(--canvas-lavender);
+    border-radius: var(--rounded-sm);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .login-button {
+    width: 100%;
+    min-height: 48px;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.38;
+    letter-spacing: 0.2px;
+    color: var(--on-primary);
+    background-color: var(--primary);
+    border: none;
+    border-radius: var(--rounded-pill);
+    padding: 14px 28px;
+    cursor: pointer;
+  }
+
+  .login-button:active {
+    background-color: var(--primary-press);
+  }
+
+  .login-button:disabled {
+    background-color: var(--ink-mute);
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .hidden {
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+  <div class="login-card">
+    <h1>첨삭진 관리</h1>
+    <p class="subtitle">이름과 4자리 번호로 로그인하세요</p>
+
+    <div id="welcomeMessage" class="welcome-message hidden"></div>
+
+    <form id="loginForm">
+      <div class="field">
+        <label for="nameSelect">이름</label>
+        <select id="nameSelect">
+          <option value="" selected disabled>이름을 선택하세요</option>
+          <option value="김민지">김민지 (첨삭진)</option>
+          <option value="박서준">박서준 (첨삭진)</option>
+          <option value="이하늘">이하늘 (첨삭진)</option>
+          <option value="정다은">정다은 (관리쌤)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="pin0">번호 (4자리)</label>
+        <div class="pin-group">
+          <input type="text" inputmode="numeric" maxlength="1" class="pin-input" id="pin0" aria-label="번호 첫째 자리">
+          <input type="text" inputmode="numeric" maxlength="1" class="pin-input" id="pin1" aria-label="번호 둘째 자리">
+          <input type="text" inputmode="numeric" maxlength="1" class="pin-input" id="pin2" aria-label="번호 셋째 자리">
+          <input type="text" inputmode="numeric" maxlength="1" class="pin-input" id="pin3" aria-label="번호 넷째 자리">
+        </div>
+      </div>
+
+      <p id="errorMessage" class="error-message"></p>
+
+      <button type="submit" id="loginButton" class="login-button" disabled>로그인</button>
+    </form>
+  </div>
+
+  <script>
+    const nameSelect = document.getElementById('nameSelect');
+    const pinInputs = [
+      document.getElementById('pin0'),
+      document.getElementById('pin1'),
+      document.getElementById('pin2'),
+      document.getElementById('pin3')
+    ];
+    const loginForm = document.getElementById('loginForm');
+    const loginButton = document.getElementById('loginButton');
+    const errorMessage = document.getElementById('errorMessage');
+    const welcomeMessage = document.getElementById('welcomeMessage');
+
+    function getPin() {
+      return pinInputs.map(input => input.value).join('');
+    }
+
+    function updateButtonState() {
+      const nameFilled = nameSelect.value !== '';
+      const pinFilled = getPin().length === 4;
+      loginButton.disabled = !(nameFilled && pinFilled);
+    }
+
+    nameSelect.addEventListener('change', updateButtonState);
+
+    pinInputs.forEach((input, index) => {
+      input.addEventListener('input', () => {
+        input.value = input.value.replace(/[^0-9]/g, '').slice(0, 1);
+        if (input.value && index < pinInputs.length - 1) {
+          pinInputs[index + 1].focus();
+        }
+        updateButtonState();
+      });
+
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Backspace' && !input.value && index > 0) {
+          pinInputs[index - 1].focus();
+        }
+      });
+    });
+
+    loginForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      errorMessage.textContent = '';
+      welcomeMessage.classList.add('hidden');
+
+      if (!nameSelect.value) {
+        errorMessage.textContent = '이름을 선택해주세요.';
+        return;
+      }
+      if (getPin().length !== 4) {
+        errorMessage.textContent = '4자리 번호를 모두 입력해주세요.';
+        return;
+      }
+
+      welcomeMessage.textContent = `환영합니다, ${nameSelect.value}님`;
+      welcomeMessage.classList.remove('hidden');
+    });
+  </script>
+
+</body>
+</html>
