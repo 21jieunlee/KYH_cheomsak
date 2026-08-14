@@ -43,6 +43,7 @@
     color: var(--ink);
     background-color: var(--canvas-lavender);
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -56,6 +57,7 @@
     border: 1px solid var(--hairline);
     border-radius: 16px;
     padding: var(--spacing-huge) var(--spacing-xxl);
+    box-shadow: 0 8px 24px rgba(74, 21, 75, 0.12);
   }
 
   .login-card h1 {
@@ -162,10 +164,21 @@
     border-radius: var(--rounded-pill);
     padding: 14px 28px;
     cursor: pointer;
+    transition: background-color 200ms ease, transform 150ms ease;
   }
 
-  .login-button:active {
+  .login-button:hover:not(:disabled) {
     background-color: var(--primary-press);
+  }
+
+  .login-button:active:not(:disabled) {
+    background-color: var(--primary-press);
+    transform: scale(0.98);
+  }
+
+  .login-button:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
   }
 
   .login-button:disabled {
@@ -181,7 +194,7 @@
 </head>
 <body>
 
-  <div class="login-card">
+  <main class="login-card">
     <h1>첨삭진 관리</h1>
     <p class="subtitle">이름과 4자리 번호로 로그인하세요</p>
 
@@ -213,7 +226,7 @@
 
       <button type="submit" id="loginButton" class="login-button" disabled>로그인</button>
     </form>
-  </div>
+  </main>
 
   <script>
     const nameSelect = document.getElementById('nameSelect');
