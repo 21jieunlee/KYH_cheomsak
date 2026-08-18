@@ -35,3 +35,38 @@ function extractSource(originallink) {
     return '';
   }
 }
+
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function escapeAttribute(text) {
+  return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+let glossaryHighlightRegex = null;
+let glossaryHighlightRegexSource = null;
+
+function buildGlossaryRegex(glossaryMap) {
+  if (glossaryHighlightRegex && glossaryHighlightRegexSource === glossaryMap) {
+    return glossaryHighlightRegex;
+  }
+  const sorted = [...glossaryMap.keys()].sort((a, b) => b.length - a.length);
+  const pattern = sorted
+    .map((term) => {
+      const escaped = escapeRegExp(term);
+      return /^[A-Za-z0-9]+$/.test(term) ? `\\b${escaped}\\b` : escaped;
+    })
+    .join('|');
+  glossaryHighlightRegex = new RegExp(`(${pattern})`, 'g');
+  glossaryHighlightRegexSource = glossaryMap;
+  return glossaryHighlightRegex;
+}
+
+function highlightGlossaryTerms(text, glossaryMap) {
+  if (!text || !glossaryMap || glossaryMap.size === 0) return text;
+  const regex = buildGlossaryRegex(glossaryMap);
+  return text.replace(regex, (match) => {
+    return `<mark class="term" data-term="${escapeAttribute(match)}">${match}</mark>`;
+  });
+}

@@ -165,3 +165,117 @@ body {
     transform: rotate(360deg);
   }
 }
+
+.nav-bar {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.nav-bar a {
+  font-size: 13px;
+  color: #666;
+  text-decoration: none;
+}
+
+.nav-bar a.active {
+  color: #2c5cf5;
+  font-weight: 700;
+}
+
+.nav-bar a:hover {
+  text-decoration: underline;
+}
+
+mark.term {
+  background: #fff3b0;
+  color: inherit;
+  text-decoration: underline dotted;
+  text-decoration-color: #c9a400;
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+mark.term:hover {
+  background: #ffe680;
+}
+
+.term-popup {
+  position: absolute;
+  z-index: 1000;
+  width: min(320px, calc(100vw - 24px));
+  background: #fff;
+  border: 1px solid #ececef;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 16px;
+}
+
+.term-popup-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: none;
+  font-size: 18px;
+  line-height: 1;
+  color: #999;
+  cursor: pointer;
+}
+
+.term-popup-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 18px 8px 0;
+}
+
+.term-popup-def {
+  font-size: 13px;
+  color: #444;
+  line-height: 1.5;
+  margin: 0 0 12px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.term-popup-save {
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #2c5cf5;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.term-popup-save:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.vocab-card {
+  background: #fff;
+  border: 1px solid #ececef;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.vocab-term {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.vocab-def {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+
+.vocab-date {
+  font-size: 12px;
+  color: #999;
+}
