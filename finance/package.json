@@ -1,8 +1,0 @@
-{
-  "name": "finance-news",
-  "private": true,
-  "dependencies": {
-    "@mozilla/readability": "^0.6.0",
-    "jsdom": "^30.0.1"
-  }
-}
