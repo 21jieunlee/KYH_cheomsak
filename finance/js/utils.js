@@ -44,6 +44,10 @@ function escapeAttribute(text) {
   return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 }
 
+function escapeHtml(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 let glossaryHighlightRegex = null;
 let glossaryHighlightRegexSource = null;
 
@@ -63,10 +67,14 @@ function buildGlossaryRegex(glossaryMap) {
   return glossaryHighlightRegex;
 }
 
-function highlightGlossaryTerms(text, glossaryMap) {
+function highlightGlossaryTerms(text, glossaryMap, usedTerms) {
   if (!text || !glossaryMap || glossaryMap.size === 0) return text;
   const regex = buildGlossaryRegex(glossaryMap);
   return text.replace(regex, (match) => {
+    if (usedTerms) {
+      if (usedTerms.has(match)) return match;
+      usedTerms.add(match);
+    }
     return `<mark class="term" data-term="${escapeAttribute(match)}">${match}</mark>`;
   });
 }

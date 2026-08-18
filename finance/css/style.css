@@ -102,6 +102,7 @@ body {
   border: 1px solid #ececef;
   border-radius: 10px;
   padding: 16px;
+  cursor: pointer;
 }
 
 .card-title {
@@ -201,9 +202,77 @@ mark.term:hover {
   background: #ffe680;
 }
 
+.article-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.article-modal-overlay[hidden] {
+  display: none;
+}
+
+.article-modal {
+  position: relative;
+  width: min(640px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 12px;
+  padding: 32px 24px 24px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+}
+
+.article-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  border: none;
+  background: none;
+  font-size: 22px;
+  line-height: 1;
+  color: #999;
+  cursor: pointer;
+}
+
+.article-modal-title {
+  font-size: 19px;
+  font-weight: 700;
+  margin: 0 0 16px;
+  padding-right: 24px;
+}
+
+.article-modal-body {
+  font-size: 15px;
+  line-height: 1.7;
+  color: #333;
+}
+
+.article-modal-body p {
+  margin: 0 0 14px;
+}
+
+.article-modal-body .spinner {
+  margin-top: 12px;
+}
+
+.article-modal-fallback {
+  text-align: center;
+  color: #888;
+}
+
+.article-modal-fallback a {
+  color: #2c5cf5;
+}
+
 .term-popup {
   position: absolute;
-  z-index: 1000;
+  z-index: 1100;
   width: min(320px, calc(100vw - 24px));
   background: #fff;
   border: 1px solid #ececef;

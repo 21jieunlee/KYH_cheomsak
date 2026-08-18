@@ -9,6 +9,7 @@
   const state = {
     query: '금리',
     sort: 'sim',
+    items: [],
   };
 
   let glossaryMap = new Map();
@@ -55,13 +56,13 @@
 
   function renderResults(items) {
     resultsEl.innerHTML = items
-      .map((item) => {
+      .map((item, index) => {
         const title = highlightGlossaryTerms(cleanNaverText(item.title), glossaryMap);
         const description = highlightGlossaryTerms(cleanNaverText(item.description), glossaryMap);
         const date = formatKoreanDate(item.pubDate);
         const source = extractSource(item.originallink || item.link);
         return `
-          <article class="card">
+          <article class="card" data-index="${index}">
             <a class="card-title" href="${item.link}" target="_blank" rel="noopener noreferrer">${title}</a>
             <p class="card-desc">${description}</p>
             <div class="card-meta">
@@ -91,10 +92,12 @@
       }
 
       if (!data.items || data.items.length === 0) {
+        state.items = [];
         renderState('empty', '검색 결과가 없습니다.');
         return;
       }
 
+      state.items = data.items;
       renderState(null);
       renderResults(data.items);
     } catch (err) {
@@ -173,7 +176,7 @@
     });
   }
 
-  resultsEl.addEventListener('click', (e) => {
+  function handleTermClick(e) {
     const markEl = e.target.closest('.term');
     if (!markEl) return;
     e.preventDefault();
@@ -182,12 +185,89 @@
     const definition = glossaryMap.get(term);
     if (!definition) return;
     showPopup(markEl, term, definition);
-  });
+  }
+
+  resultsEl.addEventListener('click', handleTermClick);
 
   document.addEventListener('click', (e) => {
     if (popupEl.hidden) return;
     if (popupEl.contains(e.target) || e.target.closest('.term')) return;
     hidePopup();
+  });
+
+  // --- 기사 본문 모달 ---
+  const modalOverlayEl = document.createElement('div');
+  modalOverlayEl.className = 'article-modal-overlay';
+  modalOverlayEl.hidden = true;
+  modalOverlayEl.innerHTML = `
+    <div class="article-modal" role="dialog" aria-modal="true">
+      <button type="button" class="article-modal-close" aria-label="닫기">&times;</button>
+      <h2 class="article-modal-title"></h2>
+      <div class="article-modal-body"></div>
+    </div>
+  `;
+  document.body.appendChild(modalOverlayEl);
+
+  const modalTitleEl = modalOverlayEl.querySelector('.article-modal-title');
+  const modalBodyEl = modalOverlayEl.querySelector('.article-modal-body');
+
+  modalBodyEl.addEventListener('click', handleTermClick);
+
+  function closeModal() {
+    modalOverlayEl.hidden = true;
+    modalBodyEl.innerHTML = '';
+    modalTitleEl.textContent = '';
+    hidePopup();
+  }
+
+  modalOverlayEl.querySelector('.article-modal-close').addEventListener('click', closeModal);
+  modalOverlayEl.addEventListener('click', (e) => {
+    if (e.target === modalOverlayEl) closeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modalOverlayEl.hidden) closeModal();
+  });
+
+  async function openArticleModal(item) {
+    const sourceUrl = item.originallink || item.link;
+    modalTitleEl.textContent = cleanNaverText(item.title);
+    modalBodyEl.innerHTML = '<div class="spinner"></div><p>본문을 불러오는 중입니다...</p>';
+    modalOverlayEl.hidden = false;
+
+    try {
+      const res = await fetch(`/api/article?url=${encodeURIComponent(sourceUrl)}`, { cache: 'no-store' });
+      const data = await res.json();
+
+      if (!res.ok || !data.paragraphs || data.paragraphs.length === 0) {
+        throw new Error(data.error || '본문을 불러오지 못했습니다.');
+      }
+
+      if (data.title) {
+        modalTitleEl.textContent = data.title;
+      }
+
+      const usedTerms = new Set();
+      modalBodyEl.innerHTML = data.paragraphs
+        .map((p) => `<p>${highlightGlossaryTerms(escapeHtml(p), glossaryMap, usedTerms)}</p>`)
+        .join('');
+    } catch (err) {
+      modalBodyEl.innerHTML = `
+        <p class="article-modal-fallback">
+          본문을 불러올 수 없어요.
+          <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer">원문 보기</a>
+        </p>
+      `;
+    }
+  }
+
+  resultsEl.addEventListener('click', (e) => {
+    if (e.target.closest('.term')) return;
+    const cardEl = e.target.closest('.card');
+    if (!cardEl) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+    e.preventDefault();
+    const item = state.items[Number(cardEl.dataset.index)];
+    if (item) openArticleModal(item);
   });
 
   async function init() {
